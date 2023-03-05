@@ -49,9 +49,9 @@ public class OrderService {
        //own DB -> ORDER
       Order order= repository.findByOrderId(orderId);
        //PAYMENT-> REST call payment-service
-       PaymentDTO paymentDTO = restTemplate.getForObject("http://localhost:9292/payments/" + orderId, PaymentDTO.class);
+       PaymentDTO paymentDTO = restTemplate.getForObject("http://PAYMENT-SERVICE/payments/" + orderId, PaymentDTO.class);
        //user-info-> rest call user-service
-       UserDTO userDTO = restTemplate.getForObject("http://localhost:9090/users/" + order.getUserId(), UserDTO.class);
+       UserDTO userDTO = restTemplate.getForObject("http://USER-SERVICE/users/" + order.getUserId(), UserDTO.class);
        return OrderResponseDTO.builder()
                .order(order)
                .paymentResponse(paymentDTO)
