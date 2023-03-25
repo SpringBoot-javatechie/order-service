@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class OrderResponseDTO {
-
+    private String message;
     private Order order;
     private PaymentDTO paymentResponse;
     private UserDTO userInfo;
