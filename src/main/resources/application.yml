@@ -1,12 +1,13 @@
-eureka:
-  client:
-    service-url:
-      defaultZone : http://localhost:8761/eureka/
+#eureka:
+#  client:
+#    service-url:
+#      defaultZone : http://localhost:8761/eureka/
 
 spring:
   application:
     name: ORDER-SERVICE
-
+  config:
+    import: configserver:http://localhost:9595
 management:
   health:
     circuitbreakers:
@@ -14,7 +15,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: "*"
   endpoint:
     health:
       show-details: always
@@ -33,3 +34,4 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         slidingWindowSize: 10
         slidingWindowType: COUNT_BASED
+

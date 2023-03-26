@@ -10,6 +10,7 @@ import com.javatechie.repository.OrderRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.Date;
 import java.util.UUID;
 
 @Service
+@RefreshScope
 public class OrderService {
 
     public static final String ORDER_SERVICE = "orderService";
@@ -35,44 +37,53 @@ public class OrderService {
     @Lazy
     private RestTemplate restTemplate;
 
+    @Value("${microservice.payment-service.endpoints.fetchPaymentById.uri}")
+    private String fetchPaymentUri;
 
-   public String placeAnOrder(Order order){
-       //save a copy in order-service DB
-       order.setPurchaseDate(new Date());
-       order.setOrderId(UUID.randomUUID().toString().split("-")[0]);
-       repository.save(order);
-       //send it to payment service using kafka
-       try {
-           kafkaTemplate.send(topicName, new ObjectMapper().writeValueAsString(order));
-       } catch (JsonProcessingException e) {
-           e.printStackTrace();//log statement log.error
-       }
-       return "Your order with ("+order.getOrderId()+") has been placed ! we will notify once it will confirm";
-   }
-    @CircuitBreaker(name =ORDER_SERVICE,fallbackMethod = "getOrderDetails")
-   public OrderResponseDTO getOrder(String orderId){
-       //own DB -> ORDER
+    @Value("${microservice.user-service.endpoints.fetchUserById.uri}")
+    private String fetchUserUri;
 
-           Order order = repository.findByOrderId(orderId);
-           //PAYMENT-> REST call payment-service
-           PaymentDTO paymentDTO = restTemplate.getForObject("http://PAYMENT-SERVICE/payments/" + orderId, PaymentDTO.class);
-           //user-info-> rest call user-service
-           UserDTO userDTO = restTemplate.getForObject("http://USER-SERVICE/users/" + order.getUserId(), UserDTO.class);
-           return OrderResponseDTO.builder()
-                   .order(order)
-                   .paymentResponse(paymentDTO)
-                   .userInfo(userDTO)
-                   .build();
+    @Value("${test.input}")
+    private String testValue;
 
-   }
+    public String placeAnOrder(Order order) {
+        //save a copy in order-service DB
 
-   public OrderResponseDTO getOrderDetails(String orderId,Exception ex){
-       //you can call a DB
-       //you can invoke external api
-       return new OrderResponseDTO("FAILED",null,null,null);
-   }
+        order.setPurchaseDate(new Date());
+        order.setOrderId(UUID.randomUUID().toString().split("-")[0]);
+        repository.save(order);
+        //send it to payment service using kafka
+        try {
+            kafkaTemplate.send(topicName, new ObjectMapper().writeValueAsString(order));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();//log statement log.error
+        }
+        return "Your order with (" + order.getOrderId() + ") has been placed ! we will notify once it will confirm";
+    }
 
+    @CircuitBreaker(name = ORDER_SERVICE, fallbackMethod = "getOrderDetails")
+    public OrderResponseDTO getOrder(String orderId) {
+        //own DB -> ORDER
+        System.out.println("****** "+testValue);
+        System.out.println("fetchPaymentUri : "+fetchPaymentUri +" && "+"fetchUserUri: "+fetchUserUri);
+        Order order = repository.findByOrderId(orderId);
+        //PAYMENT-> REST call payment-service
+        PaymentDTO paymentDTO = restTemplate.getForObject(fetchPaymentUri + orderId, PaymentDTO.class);
+        //user-info-> rest call user-service
+        UserDTO userDTO = restTemplate.getForObject(fetchUserUri + order.getUserId(), UserDTO.class);
+        return OrderResponseDTO.builder()
+                .order(order)
+                .paymentResponse(paymentDTO)
+                .userInfo(userDTO)
+                .build();
 
+    }
+
+    public OrderResponseDTO getOrderDetails(String orderId, Exception ex) {
+        //you can call a DB
+        //you can invoke external api
+        return new OrderResponseDTO("FAILED", null, null, null);
+    }
 
 
 }
